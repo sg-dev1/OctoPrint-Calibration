@@ -50,10 +50,7 @@ $(function() {
         var self = this;
 
         var PLUGIN_ID = "calibration"; // from setup.py plugin_identifier
-
-        var calibrateEStepsCmd = {
-            "command": "calibrateESteps",
-        };
+        
         var startExtrudingCmd = {
             "command": "startExtruding",
         };
@@ -91,9 +88,30 @@ $(function() {
 
         self.stepModels = ko.observableArray([
             new Step(0,  "StartPage", "calibPlugin_startPageTmpl", {
-                startNewEStepsCalibration: 
+                newEStepsCalibration: 
                     function() {
-                        console.log("startNewEStepsCalibration called");                        
+                        self.currentStep(self.stepModels()[1]);
+                    }
+            }),
+            new Step(1, "NewEStepCalibration", "eSteps_newEStepCalibrationTmpl", {
+                filamentName: ko.observable(),
+                filamentTypes: ko.observableArray([
+                    {name: "PLA"},
+                    {name: "PETG"},
+                    {name: "ABS"},
+                    {name: "Nylon"},
+                    {name: "PC"}
+                ]),
+                selectedFilamentType: ko.observable(),
+                startEStepsCalibration: 
+                    function() {
+                        var innerSelf = this;
+
+                        var calibrateEStepsCmd = {
+                            "command": "calibrateESteps",
+                            "filamentName": innerSelf.filamentName(),
+                            "filamentType": innerSelf.selectedFilamentType()
+                        };
                         
                         self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data));
@@ -102,10 +120,10 @@ $(function() {
                                 self.getToolState(function(state) {
                                     if (state == 4) {
                                         // only advance to next step when state == WAITING_FOR_EXTRUDE_START (4)
-                                        self.currentStep(self.stepModels()[2]);
+                                        self.currentStep(self.stepModels()[3]);
                                     }
                                     else {
-                                        self.currentStep(self.stepModels()[1]);
+                                        self.currentStep(self.stepModels()[2]);
                                         setTimeout(timeoutHandler, 3000);
                                     }
                                 });
@@ -114,9 +132,9 @@ $(function() {
                         });
                     }
             }),
-            new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
+            new Step(2, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
             }),
-            new Step(2, "StartExtruding", "eSteps_startExtrudingTmpl", {
+            new Step(3, "StartExtruding", "eSteps_startExtrudingTmpl", {
                 startExtruding: 
                     function() {
                         console.log("startExtruding called");                        
@@ -129,10 +147,10 @@ $(function() {
                             self.getToolState(function(state) {
                                 if (state == 6) {
                                     // only advance to next step when state == WAITING_FOR_MEASUREMENT_INPUT (6)
-                                    self.currentStep(self.stepModels()[4]);
+                                    self.currentStep(self.stepModels()[5]);
                                 }
                                 else {
-                                    self.currentStep(self.stepModels()[3]);
+                                    self.currentStep(self.stepModels()[4]);
                                     setTimeout(timeoutHandler, 3000);
                                 }
                             });
@@ -140,9 +158,9 @@ $(function() {
                         timeoutHandler();
                     }
             }),
-            new Step(3, "WaitingForExtrudeFinished", "eSteps_waitingForExtrudeFinishedTmpl", {
+            new Step(4, "WaitingForExtrudeFinished", "eSteps_waitingForExtrudeFinishedTmpl", {
             }),
-            new Step(4, "EStepsResult", "eSteps_resultCalcTmpl", {
+            new Step(5, "EStepsResult", "eSteps_resultCalcTmpl", {
                 measuredFilamentLength: ko.observable(20),
                 submitMeasuredFilamentLength: 
                     function() {
@@ -179,11 +197,11 @@ $(function() {
                         self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data));
 
-                            self.currentStep(self.stepModels()[5]);
+                            self.currentStep(self.stepModels()[6]);
                         });
                     }
             }),
-            new Step(5, "EStepCalibrationFinished", "eSteps_calibrationFinishedTmpl", {
+            new Step(6, "EStepCalibrationFinished", "eSteps_calibrationFinishedTmpl", {
                 eStepCalibFinished: function() {
                     self.currentStep(self.stepModels()[0]);
                 }

@@ -22,16 +22,31 @@
     <div>Select the calibration you want to perform:</div>
 
     <div>
-    <button title="Submit measurement" class="btn btn-primary" data-bind="click: startNewEStepsCalibration">
+    <button title="New e steps calibration" class="btn btn-primary" data-bind="click: newEStepsCalibration">
         <i class="fa fa-plus"></i> E Steps Calibration</button>
     </div>
 </script>
 
-<!-- 
-  TODO a state is needed where user fills in some data saved in the report 
-  (e.g. Filament name, type, hotend temp (already in config, could be changed here as well)) 
-  -> filament names should  be also stored in some config
--->
+<!-- BEGIN E Steps Calibration -->
+
+<script id="eSteps_newEStepCalibrationTmpl" type="text/html">
+    <div>
+        <label>Filament name: 
+        <input type="text" class="input-xxlarge" data-bind="value: filamentName"></label>
+    </div>
+
+    <div>
+        <label>Filament type: 
+        <select data-bind="options: filamentTypes, optionsText: 'name', value: selectedFilamentType"></select></label>
+    </div>
+
+    <!-- TODO further input, e.g. temperature (default from config) can be also overwritten here -->
+
+    <div>
+    <button title="Start e steps calibration" class="btn btn-primary" data-bind="click: startEStepsCalibration">
+        <i class="fa fa-plus"></i> Start E Steps Calibration</button>
+    </div>
+</script>
 
 <script id="eSteps_waitingForExtruderTemp" type="text/html">
     <div>Waiting for extruder to reach target temperature ...</div>
@@ -79,3 +94,5 @@
     <button title="Go to calibration start page" class="btn btn-primary" data-bind="click: eStepCalibFinished"><!--<i class="fa fa-plus"></i>-->Back to startpage</button>   
     </div>
 </script>
+
+<!-- END E Steps Calibration -->

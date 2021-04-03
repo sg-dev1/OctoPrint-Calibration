@@ -30,7 +30,7 @@ class EStepsCalibrationTool(object):
 
     def getApiCommands(self):
         return dict(
-            calibrateESteps=[],
+            calibrateESteps=["filamentName", "filamentType"],
             startExtruding=[],
             eStepsMeasured=["measurement"],
             saveNewESteps=[],
@@ -42,9 +42,15 @@ class EStepsCalibrationTool(object):
             return
 
         if command == "calibrateESteps":
-            self._calibPluginInstance._logger.info("Command received: calibrateESteps")            
+            self._filamentName = data["filamentName"]
+            self._filamentType = data["filamentType"]
+            toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
 
-            self._calibPluginInstance._printer.set_temperature("tool0", self._calibPluginInstance._settings.get_int(["hotendTemp"]))
+            self._calibPluginInstance._logger.info(
+                "Starting new e steps calibration for filament '%s' of type '%s' with hotend temperature %d." % \
+                    (self._filamentName, self._filamentType["name"], toolTemperature))
+
+            self._calibPluginInstance._printer.set_temperature("tool0", toolTemperature)
             self._calibPluginInstance._printer.commands("M92")
             self._switchState(EStepsCalibrationTool.State.WAITING_FOR_M92_ANSWER)
 
