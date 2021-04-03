@@ -5,6 +5,32 @@
  * License: AGPLv3
  */
 $(function() {
+    function APIClient(pluginId, baseUrl) {
+        this.pluginId = pluginId;
+        this.baseUrl = baseUrl;
+
+        this.makePostRequest = function(postData, responseHandler) {
+            $.ajax({
+                url: this.baseUrl + "plugin/" + this.pluginId,
+                type: "post",
+                dataType: "json",
+                contentType: 'application/json',
+                data: JSON.stringify(postData)
+            }).done(function( data ){
+                responseHandler(data);
+            });
+        };
+
+        this.makeGetRequest = function(responseHandler) {
+            $.ajax({
+                url: this.baseUrl + "plugin/" + this.pluginId,
+                type: "get"
+            }).done(function( data ){
+                responseHandler(data);
+            });
+        };
+    };
+
     function CalibrationViewModel(parameters) {
         var self = this;
 
@@ -20,7 +46,9 @@ $(function() {
 
         self.measuredFilamentLength = ko.observable();
         self.oldEsteps = ko.observable();
-        self.newEsteps = ko.observable();     
+        self.newEsteps = ko.observable();
+        
+        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
 
         var calibrateEStepsCmd = {
             "command": "calibrateESteps",
@@ -35,36 +63,16 @@ $(function() {
         self.startNewEStepsCalibration = function() {
             console.log("startNewEStepsCalibration called");
             
-            $.ajax({
-                url: API_BASEURL + "plugin/" + PLUGIN_ID,
-                type: "post",
-                dataType: "json",
-                contentType: 'application/json',
-                //data: "{\"command\": \"calibrateESteps\"}"
-                /*JSON.stringify({
-                    "command": "calibrateESteps",
-                })*/
-                data: JSON.stringify(calibrateEStepsCmd)
-            }).done(function( data ){
-                //responseHandler(data)
-                //shoud be done by the server to make sure the server is informed countdownDialog.modal('hide');
-                //countdownDialog.modal('hide');
-                //countdownCircle = null;
-                console.log("Call done:" + JSON.stringify(data));
+            self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {
+                console.log("Call done:" + JSON.stringify(data)); 
             });
         };
 
         self.startExtruding = function() {
             console.log("startExtruding called");
 
-            $.ajax({
-                url: API_BASEURL + "plugin/" + PLUGIN_ID,
-                type: "post",
-                dataType: "json",
-                contentType: 'application/json',
-                data: JSON.stringify(startExtrudingCmd)
-            }).done(function( data ){
-                console.log("Call done:" + JSON.stringify(data));
+            self.apiClient.makePostRequest(startExtrudingCmd, function(data) {
+                console.log("Call done:" + JSON.stringify(data)); 
             });
         }
 
@@ -78,19 +86,10 @@ $(function() {
 
             console.log("Sending request: " + JSON.stringify(eStepsMeasuredCmd));
 
-            $.ajax({
-                url: API_BASEURL + "plugin/" + PLUGIN_ID,
-                type: "post",
-                dataType: "json",
-                contentType: 'application/json',
-                data: JSON.stringify(eStepsMeasuredCmd)
-            }).done(function( data ){
-                console.log("Call done:" + data);
+            self.apiClient.makePostRequest(eStepsMeasuredCmd, function(data) {
+                console.log("Call done:" + JSON.stringify(data));
 
-                $.ajax({
-                    url: API_BASEURL + "plugin/" + PLUGIN_ID,
-                    type: "get"
-                }).done(function( data ){
+                self.apiClient.makeGetRequest(function (data) {
                     console.log("GET call done:" + JSON.stringify(data));
 
                     if (data["newEstepsValid"] == "True") {
@@ -104,14 +103,9 @@ $(function() {
         self.saveNewEsteps = function() {
             console.log("saveNewEsteps called");
 
-            $.ajax({
-                url: API_BASEURL + "plugin/" + PLUGIN_ID,
-                type: "post",
-                dataType: "json",
-                contentType: 'application/json',
-                data: JSON.stringify(saveNewEstepsCmd)
-            }).done(function( data ){
+            self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
                 console.log("Call done:" + JSON.stringify(data));
+                // Here at least user should be informed that calib procedure is finished
             });
         };
     }
