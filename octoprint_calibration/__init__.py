@@ -1,9 +1,8 @@
 # coding=utf-8
 from __future__ import absolute_import
-from enum import Enum
-import threading
 
 import flask
+from octoprint_calibration.calib_tools import EStepsCalibrationTool
 
 ### (Don't forget to remove me)
 # This is a basic skeleton for your plugin's __init__.py. You probably want to adjust the class name of your plugin
@@ -21,25 +20,14 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.SimpleApiPlugin,
                         octoprint.plugin.EventHandlerPlugin):
 
-    class PluginState(Enum):
-        IDLE = 1
-        WAITING_FOR_M92_ANSWER = 2
-        WAITING_FOR_EXTRUDER_TEMP = 3
-        WAITING_FOR_EXTRUDE_START = 4
-        WAITING_FOR_EXTRUDE_FINISHED = 5
-        WAITING_FOR_MEASUREMENT_INPUT = 6
-        WAITING_FOR_USER_CONFIRM = 7
-
     def initialize(self):
         if self._printer.get_state_id() == "OPERATIONAL":
             self._connected = True
         else:
             self._connected = False
-        self._state = CalibrationPlugin.PluginState.IDLE
-        self._startExtrudingClicked = False
-        self._eSteps = 0.0
-        self._newEsteps = 0.0
-        self._newEstepsValid = False
+
+        self._eStepsCalibTool = EStepsCalibrationTool()
+        self._eStepsCalibTool.initialize(self)
 
     ##~~ SettingsPlugin mixin
 
@@ -84,91 +72,21 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
 
     #~~ SimpleApiPlugin mixin
     def get_api_commands(self):
-        return dict(
-            #command1=[],
-            #command2=["some_parameter"]
-            calibrateESteps=[],
-            startExtruding=[],
-            eStepsMeasured=["measurement"],
-            saveNewESteps=[],
-        )
+        return self._eStepsCalibTool.getApiCommands()
 
-    def on_api_command(self, command, data):        
-        """
-        if command == "command1":
-            parameter = "unset"
-            if "parameter" in data:
-                parameter = "set"
-            self._logger.info("command1 called, parameter is {parameter}".format(**locals()))
-        elif command == "command2":
-            self._logger.info("command2 called, some_parameter is {some_parameter}".format(**data))
-        """
-        if not self._isOperational():
-            self._logger.error("Not operational. Cannot calibrate e steps.")
-            return
-
-        if command == "calibrateESteps":
-            self._logger.info("Command received: calibrateESteps")            
-
-            self._printer.set_temperature("tool0", self._settings.get_int(["hotendTemp"]))
-            self._printer.commands("M92")
-            self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_M92_ANSWER)
-
-        if command == "startExtruding":
-            if self._state == CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDE_START:
-                self._extrudeFilament()
-            else:
-                self._startExtrudingClicked = True
-
-        if command == "eStepsMeasured":
-            if self._state != CalibrationPlugin.PluginState.WAITING_FOR_MEASUREMENT_INPUT:
-                self._logger.info("Wrong state detected: %s" % self._state)
-                return
-            self._logger.info("Command received: eStepsMeasured")
-            if not self._isOperational():
-                self._logger.error("Not operational. Cannot calibrate e steps.")
-                return
-            
-            measuredLength = float(data["measurement"])
-            self._logger.info("Received measurement %.2f." % measuredLength)
-
-            filamentExtruded = 120 - measuredLength
-            self._newEsteps = self._eSteps / filamentExtruded * 100
-            self._newEstepsValid = True
-
-            self._logger.info("E steps should be changed from %.2f to %.2f." % (self._eSteps, self._newEsteps))
-
-            self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_USER_CONFIRM)
-
-            # present result to user (with option to save it)
-            # what to use as "return channel" to notify user - WebSockets?
-            # --> for simplicity now the get endpoint is now used by the frontend (not the best solution)
-
-        if command == "saveNewESteps":
-            if self._state != CalibrationPlugin.PluginState.WAITING_FOR_USER_CONFIRM:
-                self._logger.info("Wrong state detected: %s" % self._state)
-                return
-            self._logger.info("Command received: saveNewESteps")
-
-            self._printer.set_temperature("tool0", 0)
-            self._printer.commands(["M92 E%.2f" % self._newEsteps, "M500", "G90"])
-
-            self._logger.info("E steps calibration procedure finished")
-
+    def on_api_command(self, command, data):
+        self._eStepsCalibTool.handleApiCommand(command, data)
 
     def on_api_get(self, request):
-        return flask.jsonify(
-                oldEsteps="%.2f" % self._eSteps,
-                newEsteps="%.2f" % self._newEsteps,
-                newEstepsValid=str(self._newEstepsValid)
-            )
+        return flask.jsonify(self._eStepsCalibTool.getToolState())
 
     #~~ EventHandlerPlugin mixin
     def on_event(self, event, payload):
         if event == 'Disconnected':
             self._logger.info("Printer disconnected. \n" + str(payload))
             self._connected = False    
-            self._state = CalibrationPlugin.PluginState.IDLE 
+            #self._state = CalibrationPlugin.PluginState.IDLE
+            self._eStepsCalibTool.handlePrinterDisconnected()
         if event == 'Connected':
             self._logger.info("Printer connected. \n" + str(payload))
             self._connected = True
@@ -179,55 +97,17 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
     def on_printer_gcode_received(self, comm, line, *args, **kwargs):
         #if "wait" != line:
         #    self._logger.info("on_printer_gcode_received: line=" + line)
-        line_lower = line.lower()
 
-        # Recv: echo: M92 X80.0 Y80.0 Z800.0 E90.0
-        if "m92" in line_lower and self._state == CalibrationPlugin.PluginState.WAITING_FOR_M92_ANSWER:
-            parts = line_lower.split(" ")
-            eStepsStr = parts[len(parts) - 1][1:]
-            self._logger.info("E steps got from printer: " + eStepsStr)
-            self._eSteps = float(eStepsStr)
-            self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDER_TEMP)
-            threading.Timer(3.0, self._preheatWait).start()
-
-        if self._state == CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDE_FINISHED and "ok" in line_lower:
-            self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_MEASUREMENT_INPUT)
+        self._eStepsCalibTool.handleGcodeReceived(comm, line, args, kwargs)
 
         return line
 
-    ### Internal stuff
-    def _isOperational(self):
+    ### Public Interface
+    def isOperational(self):
         return self._connected
 
-    def _switchState(self, newState):
-        oldState = self._state
-        self._state = newState
-        self._logger.info("Switching from state %s to state %s." % (str(oldState), str(newState)))
-
-    def _extrudeFilament(self):
-        self._startExtrudingClicked = False
-        self._printer.commands(["G91", "G1 E100 F50"])
-
-        # need to wait till extrude is finished
-        self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDE_FINISHED)
-
-    def _preheatWait(self):
-        if self._state != CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDER_TEMP:
-            self._logger.info("Wrong state detected")
-            return
-        temps = self._printer.get_current_temperatures()
-        self._logger.info("temps: %s" % str(temps))
-        toolReady = True
-        if temps['tool0']['actual'] + 3 < temps['tool0']['target']:
-            toolReady = False
-        if toolReady:
-            self._switchState(CalibrationPlugin.PluginState.WAITING_FOR_EXTRUDE_START)
-            if self._startExtrudingClicked:
-                # user is already ready for extrude
-                self._extrudeFilament()
-        else:
-            self._logger.info("Preheating...")
-            threading.Timer(3.0, self._preheatWait).start()
+    ### Internal stuff
+    ###
 
 
 
