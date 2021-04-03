@@ -71,32 +71,78 @@ $(function() {
         
         self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
 
+        /*
+            class State(Enum):
+                IDLE = 1
+                WAITING_FOR_M92_ANSWER = 2
+                WAITING_FOR_EXTRUDER_TEMP = 3
+                WAITING_FOR_EXTRUDE_START = 4
+                WAITING_FOR_EXTRUDE_FINISHED = 5
+                WAITING_FOR_MEASUREMENT_INPUT = 6
+                WAITING_FOR_USER_CONFIRM = 7
+        */
+        self.getToolState = function(handleToolState) {
+            self.apiClient.makeGetRequest(function (data) {
+                console.log("GET call done:" + JSON.stringify(data));
+
+                handleToolState(data["eStepsToolState"]);
+            });
+        };
+
         self.stepModels = ko.observableArray([
-            new Step(1,  "StartPage", "calibPlugin_startPageTmpl", {
+            new Step(0,  "StartPage", "calibPlugin_startPageTmpl", {
                 startNewEStepsCalibration: 
                     function() {
-                        console.log("startNewEStepsCalibration called");
-
-                        self.currentStep(self.stepModels()[1]);
+                        console.log("startNewEStepsCalibration called");                        
                         
                         self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {
-                            console.log("Call done:" + JSON.stringify(data)); 
+                            console.log("Call done:" + JSON.stringify(data));
+
+                            var timeoutHandler = function() {
+                                self.getToolState(function(state) {
+                                    if (state == 4) {
+                                        // only advance to next step when state == WAITING_FOR_EXTRUDE_START (4)
+                                        self.currentStep(self.stepModels()[2]);
+                                    }
+                                    else {
+                                        self.currentStep(self.stepModels()[1]);
+                                        setTimeout(timeoutHandler, 3000);
+                                    }
+                                });
+                            };
+                            timeoutHandler();
                         });
                     }
+            }),
+            new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
             }),
             new Step(2, "StartExtruding", "eSteps_startExtrudingTmpl", {
                 startExtruding: 
                     function() {
-                        console.log("startExtruding called");
-
-                        self.currentStep(self.stepModels()[2]);
+                        console.log("startExtruding called");                        
             
                         self.apiClient.makePostRequest(startExtrudingCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data)); 
                         });
+
+                        var timeoutHandler = function() {
+                            self.getToolState(function(state) {
+                                if (state == 6) {
+                                    // only advance to next step when state == WAITING_FOR_MEASUREMENT_INPUT (6)
+                                    self.currentStep(self.stepModels()[4]);
+                                }
+                                else {
+                                    self.currentStep(self.stepModels()[3]);
+                                    setTimeout(timeoutHandler, 3000);
+                                }
+                            });
+                        };
+                        timeoutHandler();
                     }
             }),
-            new Step(3, "EStepsResult", "eSteps_resultCalcTmpl", {
+            new Step(3, "WaitingForExtrudeFinished", "eSteps_waitingForExtrudeFinishedTmpl", {
+            }),
+            new Step(4, "EStepsResult", "eSteps_resultCalcTmpl", {
                 measuredFilamentLength: ko.observable(20),
                 submitMeasuredFilamentLength: 
                     function() {
@@ -132,11 +178,15 @@ $(function() {
             
                         self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data));
-                            // Here at least user should be informed that calib procedure is finished
 
-                            self.currentStep(self.stepModels()[0]);
+                            self.currentStep(self.stepModels()[5]);
                         });
                     }
+            }),
+            new Step(5, "EStepCalibrationFinished", "eSteps_calibrationFinishedTmpl", {
+                eStepCalibFinished: function() {
+                    self.currentStep(self.stepModels()[0]);
+                }
             })
         ]);
         

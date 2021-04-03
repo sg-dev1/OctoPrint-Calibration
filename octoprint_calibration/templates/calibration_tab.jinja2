@@ -10,38 +10,6 @@
 <a href="#" data-bind="click: testClick" title="Force refresh" ><span class="icon-bar-chart"></span> Test Click</a>
 -->
 
-<!-- Initial impl
-<div>
-<button title="Start new e-steps calibration" class="btn btn-primary" data-bind="click: startNewEStepsCalibration"><i class="fa fa-plus"></i>Calibrate E-Steps</button>
-</div>
-
- <div>
- <button title="Start extruding 100 mm" class="btn btn-primary" data-bind="click: startExtruding"><i class="fa fa-plus"></i>Start extruding 100 mm</button>   
-</div>
-
-<div>
-    <div>
-        <label>Measurement between extruder entry and mark on filament (mm): 
-        <input type="number" class="input-xxlarge" data-bind="value: measuredFilamentLength" step="0.01"></label>
-    </div>
-
-    <button title="Submit measurement" class="btn btn-primary" data-bind="click: submitMeasuredFilamentLength"><i class="fa fa-plus"></i>Submit</button>
-</div>
-
-<div>
-    <label>Old E Steps: 
-    <input title="Old E Steps" type="number" class="input-xxlarge" data-bind="value: oldEsteps"></label>
-</div>
-<div>
-    <label>New E Steps: 
-    <input title="New E Steps" type="number" class="input-xxlarge" data-bind="value: newEsteps"></label>
-</div>
-
-<button title="Save New E Steps" class="btn btn-primary" data-bind="click: saveNewEsteps"><i class="fa fa-plus"></i>Save</button>
--->
-
-<!-- ... -->
-
 <div data-bind="template: { name: 'currentTmpl', data: currentStep }"></div>
 
 <script id="currentTmpl" type="text/html">
@@ -55,14 +23,28 @@
 
     <div>
     <button title="Submit measurement" class="btn btn-primary" data-bind="click: startNewEStepsCalibration">
-        <i class="fa fa-plus"></i>E Steps Calibration</button>
+        <i class="fa fa-plus"></i> E Steps Calibration</button>
     </div>
+</script>
+
+<!-- 
+  TODO a state is needed where user fills in some data saved in the report 
+  (e.g. Filament name, type, hotend temp (already in config, could be changed here as well)) 
+  -> filament names should  be also stored in some config
+-->
+
+<script id="eSteps_waitingForExtruderTemp" type="text/html">
+    <div>Waiting for extruder to reach target temperature ...</div>
 </script>
 
 <script id="eSteps_startExtrudingTmpl" type="text/html">
     <div>
     <button title="Start extruding 100 mm" class="btn btn-primary" data-bind="click: startExtruding"><!--<i class="fa fa-plus"></i>-->Start extruding 100 mm</button>   
     </div>
+</script>
+
+<script id="eSteps_waitingForExtrudeFinishedTmpl" type="text/html">
+    <div>Waiting for filament extrude to finish ...</div>
 </script>
 
 <script id="eSteps_resultCalcTmpl" type="text/html">
@@ -77,12 +59,23 @@
 
     <div>
         <label>Old E Steps: 
-        <input title="Old E Steps" type="number" class="input-xxlarge" data-bind="value: oldEsteps"></label>
+        <input title="Old E Steps" type="number" class="input-xxlarge" data-bind="value: oldEsteps" readonly></label>
     </div>
     <div>
+    <!-- Current impl does not support updating e steps (although it would make sense let the user change it) 
+        -> update e steps command in backend needed
+    -->
         <label>New E Steps: 
-        <input title="New E Steps" type="number" class="input-xxlarge" data-bind="value: newEsteps"></label>
+        <input title="New E Steps" type="number" class="input-xxlarge" data-bind="value: newEsteps" readonly></label>
     </div>
 
     <button title="Save New E Steps" class="btn btn-primary" data-bind="click: saveNewEsteps"><i class="fa fa-plus"></i>Save</button>
+</script>
+
+<script id="eSteps_calibrationFinishedTmpl" type="text/html">
+    <div>E steps calibration finished successful.</div>
+    
+    <div>
+    <button title="Go to calibration start page" class="btn btn-primary" data-bind="click: eStepCalibFinished"><!--<i class="fa fa-plus"></i>-->Back to startpage</button>   
+    </div>
 </script>

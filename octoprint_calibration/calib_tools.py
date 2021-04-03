@@ -24,7 +24,8 @@ class EStepsCalibrationTool(object):
         return dict(
             oldEsteps="%.2f" % self._eSteps,
             newEsteps="%.2f" % self._newEsteps,
-            newEstepsValid=str(self._newEstepsValid)
+            newEstepsValid=str(self._newEstepsValid),
+            eStepsToolState=str(self._state.value)
         )
 
     def getApiCommands(self):
