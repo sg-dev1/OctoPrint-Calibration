@@ -10,6 +10,7 @@
 <a href="#" data-bind="click: testClick" title="Force refresh" ><span class="icon-bar-chart"></span> Test Click</a>
 -->
 
+<!-- Initial impl
 <div>
 <button title="Start new e-steps calibration" class="btn btn-primary" data-bind="click: startNewEStepsCalibration"><i class="fa fa-plus"></i>Calibrate E-Steps</button>
 </div>
@@ -37,3 +38,51 @@
 </div>
 
 <button title="Save New E Steps" class="btn btn-primary" data-bind="click: saveNewEsteps"><i class="fa fa-plus"></i>Save</button>
+-->
+
+<!-- ... -->
+
+<div data-bind="template: { name: 'currentTmpl', data: currentStep }"></div>
+
+<script id="currentTmpl" type="text/html">
+    <h2>Calibration Plugin</h2>
+
+    <div data-bind="template: { name: getTemplate, data: model }"></div> 
+</script>
+
+<script id="calibPlugin_startPageTmpl" type="text/html">
+    <div>Select the calibration you want to perform:</div>
+
+    <div>
+    <button title="Submit measurement" class="btn btn-primary" data-bind="click: startNewEStepsCalibration">
+        <i class="fa fa-plus"></i>E Steps Calibration</button>
+    </div>
+</script>
+
+<script id="eSteps_startExtrudingTmpl" type="text/html">
+    <div>
+    <button title="Start extruding 100 mm" class="btn btn-primary" data-bind="click: startExtruding"><!--<i class="fa fa-plus"></i>-->Start extruding 100 mm</button>   
+    </div>
+</script>
+
+<script id="eSteps_resultCalcTmpl" type="text/html">
+    <div>
+        <div>
+            <label>Measurement between extruder entry and mark on filament (mm): 
+            <input type="number" class="input-xxlarge" data-bind="value: measuredFilamentLength" step="0.01"></label>
+        </div>
+
+        <button title="Submit measurement" class="btn btn-primary" data-bind="click: submitMeasuredFilamentLength"><i class="fa fa-plus"></i>Submit</button>
+    </div>
+
+    <div>
+        <label>Old E Steps: 
+        <input title="Old E Steps" type="number" class="input-xxlarge" data-bind="value: oldEsteps"></label>
+    </div>
+    <div>
+        <label>New E Steps: 
+        <input title="New E Steps" type="number" class="input-xxlarge" data-bind="value: newEsteps"></label>
+    </div>
+
+    <button title="Save New E Steps" class="btn btn-primary" data-bind="click: saveNewEsteps"><i class="fa fa-plus"></i>Save</button>
+</script>

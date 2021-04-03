@@ -6,12 +6,14 @@
  */
 $(function() {
     function APIClient(pluginId, baseUrl) {
-        this.pluginId = pluginId;
-        this.baseUrl = baseUrl;
+        var self = this;
 
-        this.makePostRequest = function(postData, responseHandler) {
+        self.pluginId = pluginId;
+        self.baseUrl = baseUrl;
+
+        self.makePostRequest = function(postData, responseHandler) {
             $.ajax({
-                url: this.baseUrl + "plugin/" + this.pluginId,
+                url: self.baseUrl + "plugin/" + self.pluginId,
                 type: "post",
                 dataType: "json",
                 contentType: 'application/json',
@@ -21,9 +23,9 @@ $(function() {
             });
         };
 
-        this.makeGetRequest = function(responseHandler) {
+        self.makeGetRequest = function(responseHandler) {
             $.ajax({
-                url: this.baseUrl + "plugin/" + this.pluginId,
+                url: self.baseUrl + "plugin/" + self.pluginId,
                 type: "get"
             }).done(function( data ){
                 responseHandler(data);
@@ -31,24 +33,23 @@ $(function() {
         };
     };
 
+    // http://jsfiddle.net/rniemeyer/SSY6n/
+    function Step(id, name, template, model) {
+        var self = this;
+        self.id = id;
+        self.name = ko.observable(name);
+        self.template = template;
+        self.model = ko.observable(model);  
+         
+        self.getTemplate = function() {
+            return self.template;   
+        }
+     }
+
     function CalibrationViewModel(parameters) {
         var self = this;
 
         var PLUGIN_ID = "calibration"; // from setup.py plugin_identifier
-
-        // assign the injected parameters, e.g.:
-        // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
-
-        // TODO: Implement your plugin's view model here.
-
-        console.log("Hello from CalibrationViewModel");
-
-        self.measuredFilamentLength = ko.observable();
-        self.oldEsteps = ko.observable();
-        self.newEsteps = ko.observable();
-        
-        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
 
         var calibrateEStepsCmd = {
             "command": "calibrateESteps",
@@ -58,55 +59,90 @@ $(function() {
         };
         var saveNewEstepsCmd = {
             "command": "saveNewESteps"
-        };      
+        }; 
 
-        self.startNewEStepsCalibration = function() {
-            console.log("startNewEStepsCalibration called");
-            
-            self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {
-                console.log("Call done:" + JSON.stringify(data)); 
-            });
-        };
+        // assign the injected parameters, e.g.:
+        // self.loginStateViewModel = parameters[0];
+        // self.settingsViewModel = parameters[1];
 
-        self.startExtruding = function() {
-            console.log("startExtruding called");
+        // TODO: Implement your plugin's view model here.
 
-            self.apiClient.makePostRequest(startExtrudingCmd, function(data) {
-                console.log("Call done:" + JSON.stringify(data)); 
-            });
-        }
+        console.log("Hello from CalibrationViewModel");
+        
+        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
 
-        self.submitMeasuredFilamentLength = function() {
-            console.log("submitMeasuredFilamentLength called");
+        self.stepModels = ko.observableArray([
+            new Step(1,  "StartPage", "calibPlugin_startPageTmpl", {
+                startNewEStepsCalibration: 
+                    function() {
+                        console.log("startNewEStepsCalibration called");
 
-            var eStepsMeasuredCmd = {
-                "command": "eStepsMeasured",
-                "measurement": self.measuredFilamentLength()
-            };
-
-            console.log("Sending request: " + JSON.stringify(eStepsMeasuredCmd));
-
-            self.apiClient.makePostRequest(eStepsMeasuredCmd, function(data) {
-                console.log("Call done:" + JSON.stringify(data));
-
-                self.apiClient.makeGetRequest(function (data) {
-                    console.log("GET call done:" + JSON.stringify(data));
-
-                    if (data["newEstepsValid"] == "True") {
-                        self.oldEsteps(data["oldEsteps"]);
-                        self.newEsteps(data["newEsteps"]);
+                        self.currentStep(self.stepModels()[1]);
+                        
+                        self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {
+                            console.log("Call done:" + JSON.stringify(data)); 
+                        });
                     }
-                });
-            });
-        };
+            }),
+            new Step(2, "StartExtruding", "eSteps_startExtrudingTmpl", {
+                startExtruding: 
+                    function() {
+                        console.log("startExtruding called");
 
-        self.saveNewEsteps = function() {
-            console.log("saveNewEsteps called");
+                        self.currentStep(self.stepModels()[2]);
+            
+                        self.apiClient.makePostRequest(startExtrudingCmd, function(data) {
+                            console.log("Call done:" + JSON.stringify(data)); 
+                        });
+                    }
+            }),
+            new Step(3, "EStepsResult", "eSteps_resultCalcTmpl", {
+                measuredFilamentLength: ko.observable(20),
+                submitMeasuredFilamentLength: 
+                    function() {
+                        console.log("submitMeasuredFilamentLength called");
 
-            self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
-                console.log("Call done:" + JSON.stringify(data));
-                // Here at least user should be informed that calib procedure is finished
-            });
+                        var innerSelf = this;
+
+                        var eStepsMeasuredCmd = {
+                            "command": "eStepsMeasured",
+                            "measurement": innerSelf.measuredFilamentLength()
+                        };
+            
+                        console.log("Sending request: " + JSON.stringify(eStepsMeasuredCmd));
+            
+                        self.apiClient.makePostRequest(eStepsMeasuredCmd, function(data) {
+                            console.log("Call done:" + JSON.stringify(data));
+            
+                            self.apiClient.makeGetRequest(function (data) {
+                                console.log("GET call done:" + JSON.stringify(data));
+            
+                                if (data["newEstepsValid"] == "True") {
+                                    innerSelf.oldEsteps(data["oldEsteps"]);
+                                    innerSelf.newEsteps(data["newEsteps"]);
+                                }
+                            });
+                        });
+                    },
+                oldEsteps: ko.observable(),
+                newEsteps: ko.observable(),
+                saveNewEsteps: 
+                    function() {
+                        console.log("saveNewEsteps called");
+            
+                        self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
+                            console.log("Call done:" + JSON.stringify(data));
+                            // Here at least user should be informed that calib procedure is finished
+
+                            self.currentStep(self.stepModels()[0]);
+                        });
+                    }
+            })
+        ]);
+        
+        self.currentStep = ko.observable(self.stepModels()[0]);
+        self.getTemplate = function(data) {
+            return self.currentStep().template();
         };
     }
 
