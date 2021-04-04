@@ -99,6 +99,7 @@ $(function() {
                     {name: "PC"}
                 ]),
                 selectedFilamentType: ko.observable(),
+                hotendTemperature: ko.observable(),
                 startEStepsCalibration: 
                     function() {
                         var innerSelf = this;
@@ -106,7 +107,8 @@ $(function() {
                         var calibrateEStepsCmd = {
                             "command": "calibrateESteps",
                             "filamentName": innerSelf.filamentName(),
-                            "filamentType": innerSelf.selectedFilamentType()
+                            "filamentType": innerSelf.selectedFilamentType(),
+                            "hotendTemp": innerSelf.hotendTemperature()
                         };
                         
                         self.apiClient.makePostRequest(calibrateEStepsCmd, function(data) {

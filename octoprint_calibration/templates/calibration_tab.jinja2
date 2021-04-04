@@ -50,7 +50,12 @@
         <select data-bind="options: filamentTypes, optionsText: 'name', value: selectedFilamentType"></select></label>
     </div>
 
-    <!-- TODO further input, e.g. temperature (default from config) can be also overwritten here -->
+    <div>
+        <label>Hotend Temperature (C°): 
+        <input type="number" class="input-xxlarge" data-bind="value: hotendTemperature"></label>
+    </div>
+
+    <!-- further input to be added if required -->
 
     <div>
     <button title="Start e steps calibration" class="btn btn-primary" data-bind="click: startEStepsCalibration">

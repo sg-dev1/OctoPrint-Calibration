@@ -39,7 +39,7 @@ class EStepsCalibrationTool(object):
 
     def getApiCommands(self):
         return dict(
-            calibrateESteps=["filamentName", "filamentType"],
+            calibrateESteps=["filamentName", "filamentType", "hotendTemp"],
             startExtruding=[],
             eStepsMeasured=["measurement"],
             saveNewESteps=[],
@@ -54,7 +54,8 @@ class EStepsCalibrationTool(object):
         if command == "calibrateESteps":
             self._filamentName = data["filamentName"]
             self._filamentType = data["filamentType"]
-            self._toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
+            #self._toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
+            self._toolTemperature = int(data["hotendTemp"])
 
             self._calibPluginInstance._logger.info(
                 "Starting new e steps calibration for filament '%s' of type '%s' with hotend temperature %d." % \
