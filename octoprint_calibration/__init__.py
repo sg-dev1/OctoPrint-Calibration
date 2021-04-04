@@ -15,6 +15,7 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.SimpleApiPlugin,
                         octoprint.plugin.EventHandlerPlugin):
 
+    # pylint: disable=attribute-defined-outside-init
     def initialize(self):
         if self._printer.get_state_id() == "OPERATIONAL":
             self._connected = True
@@ -23,8 +24,8 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
 
         self._databaseManager = DatabaseManager(self._logger)
         self._databaseManager.initialize(self.get_plugin_data_folder())
-        self._eStepsCalibTool = EStepsCalibrationTool()
-        self._eStepsCalibTool.initialize(self, self._databaseManager)
+        self._eStepsCalibTool = EStepsCalibrationTool(self._logger)
+        self._eStepsCalibTool.initialize(self, self._databaseManager, self._printer)
 
     ##~~ SettingsPlugin mixin
 
@@ -83,7 +84,7 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
     def on_event(self, event, payload):
         if event == 'Disconnected':
             self._logger.info("Printer disconnected. \n" + str(payload))
-            self._connected = False    
+            self._connected = False
             #self._state = CalibrationPlugin.PluginState.IDLE
             self._eStepsCalibTool.handlePrinterDisconnected()
         if event == 'Connected':
