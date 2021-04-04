@@ -1,8 +1,21 @@
 # coding=utf-8
+# pylint: disable=useless-object-inheritance,invalid-name,missing-function-docstring,missing-class-docstring,missing-module-docstring
 from enum import Enum
 import threading
 
+from octoprint_calibration.models import EStepsCalibrationModel
+
 class EStepsCalibrationTool(object):
+    def __init__(self):
+        self._calibPluginInstance = None
+        self._databaseManager = None
+        self._state = EStepsCalibrationTool.State.IDLE
+        self._startExtrudingClicked = False
+        self._eSteps = 0.0
+        self._newEsteps = 0.0
+        self._toolTemperature = 0.0
+        self._newEstepsValid = False
+
     class State(Enum):
         IDLE = 1
         WAITING_FOR_M92_ANSWER = 2
@@ -12,13 +25,9 @@ class EStepsCalibrationTool(object):
         WAITING_FOR_MEASUREMENT_INPUT = 6
         WAITING_FOR_USER_CONFIRM = 7
 
-    def initialize(self, calibPluginInstance):
+    def initialize(self, calibPluginInstance, databaseManager):
         self._calibPluginInstance = calibPluginInstance
-        self._state = EStepsCalibrationTool.State.IDLE
-        self._startExtrudingClicked = False
-        self._eSteps = 0.0
-        self._newEsteps = 0.0
-        self._newEstepsValid = False
+        self._databaseManager = databaseManager
 
     def getToolState(self):
         return dict(
@@ -44,13 +53,13 @@ class EStepsCalibrationTool(object):
         if command == "calibrateESteps":
             self._filamentName = data["filamentName"]
             self._filamentType = data["filamentType"]
-            toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
+            self._toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
 
             self._calibPluginInstance._logger.info(
                 "Starting new e steps calibration for filament '%s' of type '%s' with hotend temperature %d." % \
-                    (self._filamentName, self._filamentType["name"], toolTemperature))
+                    (self._filamentName, self._filamentType["name"], self._toolTemperature))
 
-            self._calibPluginInstance._printer.set_temperature("tool0", toolTemperature)
+            self._calibPluginInstance._printer.set_temperature("tool0", self._toolTemperature)
             self._calibPluginInstance._printer.commands("M92")
             self._switchState(EStepsCalibrationTool.State.WAITING_FOR_M92_ANSWER)
 
@@ -91,6 +100,14 @@ class EStepsCalibrationTool(object):
             self._calibPluginInstance._printer.commands(["M92 E%.2f" % self._newEsteps, "M500", "G90"])
 
             self._calibPluginInstance._logger.info("E steps calibration procedure finished")
+
+            eStepsCalibModel = EStepsCalibrationModel()
+            eStepsCalibModel.filamentName = self._filamentName
+            eStepsCalibModel.filamentType = self._filamentType["name"]
+            eStepsCalibModel.hotendTemperature = self._toolTemperature
+            eStepsCalibModel.oldESteps = round(self._eSteps, 3)
+            eStepsCalibModel.newESteps = round(self._newEsteps, 3)
+            self._databaseManager.insertEstepsCalibration(eStepsCalibModel)
 
     def handleGcodeReceived(self, comm, line, *args, **kwargs):
         line_lower = line.lower()

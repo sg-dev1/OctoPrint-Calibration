@@ -4,6 +4,9 @@
  * Author: Stefan G
  * License: AGPLv3
  */
+
+// TODO -> proper error handling in ui
+
 $(function() {
     function APIClient(pluginId, baseUrl) {
         var self = this;
