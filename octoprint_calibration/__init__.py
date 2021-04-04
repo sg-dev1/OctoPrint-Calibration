@@ -72,7 +72,9 @@ class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
         return self._eStepsCalibTool.getApiCommands()
 
     def on_api_command(self, command, data):
-        self._eStepsCalibTool.handleApiCommand(command, data)
+        success, reason = self._eStepsCalibTool.handleApiCommand(command, data)
+        if not success:
+            return flask.Response(response=reason, status=400)
 
     def on_api_get(self, _):
         return flask.jsonify(self._eStepsCalibTool.getToolState())

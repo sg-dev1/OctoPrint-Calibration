@@ -27,6 +27,16 @@
     </div>
 </script>
 
+<script id="calibPlugin_errorPageTmpl" type="text/html">
+    <div>Oops, an error occured: <b><span data-bind="text: errorMessage"></span></b>
+    </div>
+
+    <div>
+    <button title="Back to start page" class="btn btn-primary" data-bind="click: backToStartPage">
+        <i class="fa fa-plus"></i> Back to start page</button>
+    </div>
+</script>
+
 <!-- BEGIN E Steps Calibration -->
 
 <script id="eSteps_newEStepCalibrationTmpl" type="text/html">

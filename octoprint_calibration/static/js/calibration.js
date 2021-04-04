@@ -4,9 +4,6 @@
  * Author: Stefan G
  * License: AGPLv3
  */
-
-// TODO -> proper error handling in ui
-
 $(function() {
     function APIClient(pluginId, baseUrl) {
         var self = this;
@@ -14,16 +11,23 @@ $(function() {
         self.pluginId = pluginId;
         self.baseUrl = baseUrl;
 
-        self.makePostRequest = function(postData, responseHandler) {
+        self.makePostRequest = function(postData, responseHandler, errorHandler) {
             $.ajax({
                 url: self.baseUrl + "plugin/" + self.pluginId,
                 type: "post",
                 dataType: "json",
                 contentType: 'application/json',
                 data: JSON.stringify(postData)
-            }).done(function( data ){
-                responseHandler(data);
-            });
+            }).done(
+                function( data ) {
+                    responseHandler(data);
+                }
+            ).fail(
+                function (data) {
+                    console.error("Error: " + JSON.stringify(data));
+                    errorHandler(data);
+                }
+            );
         };
 
         self.makeGetRequest = function(responseHandler) {
@@ -47,29 +51,20 @@ $(function() {
         self.getTemplate = function() {
             return self.template;   
         }
-     }
+    }
 
-    function CalibrationViewModel(parameters) {
+    function EStepsCalibrationTool(apiClient, parent) {
         var self = this;
 
-        var PLUGIN_ID = "calibration"; // from setup.py plugin_identifier
-        
+        self.apiClient = apiClient;
+        self.parent = parent;       // the creator of this class (e.g. CalibrationViewModel)
+
         var startExtrudingCmd = {
             "command": "startExtruding",
         };
         var saveNewEstepsCmd = {
             "command": "saveNewESteps"
-        }; 
-
-        // assign the injected parameters, e.g.:
-        // self.loginStateViewModel = parameters[0];
-        // self.settingsViewModel = parameters[1];
-
-        // TODO: Implement your plugin's view model here.
-
-        console.log("Hello from CalibrationViewModel");
-        
-        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
+        };
 
         /*
             class State(Enum):
@@ -84,19 +79,17 @@ $(function() {
         self.getToolState = function(handleToolState) {
             self.apiClient.makeGetRequest(function (data) {
                 console.log("GET call done:" + JSON.stringify(data));
-
+        
                 handleToolState(data["eStepsToolState"]);
             });
         };
 
+        self.defaultErrorHandler = function(response) {
+            self.parent.reportError(response["responseText"]);
+        }
+
         self.stepModels = ko.observableArray([
-            new Step(0,  "StartPage", "calibPlugin_startPageTmpl", {
-                newEStepsCalibration: 
-                    function() {
-                        self.currentStep(self.stepModels()[1]);
-                    }
-            }),
-            new Step(1, "NewEStepCalibration", "eSteps_newEStepCalibrationTmpl", {
+            new Step(0, "NewEStepCalibration", "eSteps_newEStepCalibrationTmpl", {
                 filamentName: ko.observable(),
                 filamentTypes: ko.observableArray([
                     {name: "PLA"},
@@ -123,37 +116,37 @@ $(function() {
                                 self.getToolState(function(state) {
                                     if (state == 4) {
                                         // only advance to next step when state == WAITING_FOR_EXTRUDE_START (4)
-                                        self.currentStep(self.stepModels()[3]);
+                                        self.parent.setCurrentStep(self.stepModels()[2]);
                                     }
                                     else {
-                                        self.currentStep(self.stepModels()[2]);
+                                        self.parent.setCurrentStep(self.stepModels()[1]);
                                         setTimeout(timeoutHandler, 3000);
                                     }
                                 });
                             };
                             timeoutHandler();
-                        });
+                        }, self.defaultErrorHandler);
                     }
             }),
-            new Step(2, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
+            new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
             }),
-            new Step(3, "StartExtruding", "eSteps_startExtrudingTmpl", {
+            new Step(2, "StartExtruding", "eSteps_startExtrudingTmpl", {
                 startExtruding: 
                     function() {
                         console.log("startExtruding called");                        
             
                         self.apiClient.makePostRequest(startExtrudingCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data)); 
-                        });
+                        }, self.defaultErrorHandler);
 
                         var timeoutHandler = function() {
                             self.getToolState(function(state) {
                                 if (state == 6) {
                                     // only advance to next step when state == WAITING_FOR_MEASUREMENT_INPUT (6)
-                                    self.currentStep(self.stepModels()[5]);
+                                    self.parent.setCurrentStep(self.stepModels()[4]);
                                 }
                                 else {
-                                    self.currentStep(self.stepModels()[4]);
+                                    self.parent.setCurrentStep(self.stepModels()[3]);
                                     setTimeout(timeoutHandler, 3000);
                                 }
                             });
@@ -161,9 +154,9 @@ $(function() {
                         timeoutHandler();
                     }
             }),
-            new Step(4, "WaitingForExtrudeFinished", "eSteps_waitingForExtrudeFinishedTmpl", {
+            new Step(3, "WaitingForExtrudeFinished", "eSteps_waitingForExtrudeFinishedTmpl", {
             }),
-            new Step(5, "EStepsResult", "eSteps_resultCalcTmpl", {
+            new Step(4, "EStepsResult", "eSteps_resultCalcTmpl", {
                 measuredFilamentLength: ko.observable(20),
                 submitMeasuredFilamentLength: 
                     function() {
@@ -189,7 +182,7 @@ $(function() {
                                     innerSelf.newEsteps(data["newEsteps"]);
                                 }
                             });
-                        });
+                        }, self.defaultErrorHandler);
                     },
                 oldEsteps: ko.observable(),
                 newEsteps: ko.observable(),
@@ -200,14 +193,49 @@ $(function() {
                         self.apiClient.makePostRequest(saveNewEstepsCmd, function(data) {
                             console.log("Call done:" + JSON.stringify(data));
 
-                            self.currentStep(self.stepModels()[6]);
-                        });
+                            self.parent.setCurrentStep(self.stepModels()[5]);
+                        }, self.defaultErrorHandler);
                     }
             }),
-            new Step(6, "EStepCalibrationFinished", "eSteps_calibrationFinishedTmpl", {
+            new Step(5, "EStepCalibrationFinished", "eSteps_calibrationFinishedTmpl", {
                 eStepCalibFinished: function() {
-                    self.currentStep(self.stepModels()[0]);
+                    self.parent.goToStartPage();
                 }
+            })
+        ]);
+
+        self.firstStep = function() {
+            return self.stepModels()[0];
+        }
+    }
+
+    function CalibrationViewModel(parameters) {
+        var self = this;
+
+        var PLUGIN_ID = "calibration"; // from setup.py plugin_identifier
+
+        // assign the injected parameters, e.g.:
+        // self.loginStateViewModel = parameters[0];
+        // self.settingsViewModel = parameters[1];
+
+        console.log("Hello from CalibrationViewModel");
+        
+        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
+        self.eStepsCalibrationTool = new EStepsCalibrationTool(self.apiClient, self);
+
+        self.stepModels = ko.observableArray([
+            new Step(0,  "StartPage", "calibPlugin_startPageTmpl", {
+                newEStepsCalibration: 
+                    function() {
+                        self.currentStep(self.eStepsCalibrationTool.firstStep());
+                    }
+            }),
+            new Step(1, "ErrorPage", "calibPlugin_errorPageTmpl", {
+                errorMessage: ko.observable(),
+                backToStartPage: 
+                    function() {
+                        self.goToStartPage();
+                    }
             })
         ]);
         
@@ -215,6 +243,20 @@ $(function() {
         self.getTemplate = function(data) {
             return self.currentStep().template();
         };
+
+        self.goToStartPage = function() {
+            return self.currentStep(self.stepModels()[0]);
+        }
+        self.setCurrentStep = function(currStep) {
+            self.currentStep(currStep);
+        }
+
+        self.reportError = function(errorMsg) {
+            errorStp = self.stepModels()[1];
+            //console.log("errorStp.model: " + JSON.stringify(errorStp.model()));
+            errorStp.model()["errorMessage"](errorMsg);
+            self.currentStep(errorStp);
+        }
     }
 
     /* view model class, parameters for constructor, container to bind to

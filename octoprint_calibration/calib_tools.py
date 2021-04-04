@@ -47,8 +47,9 @@ class EStepsCalibrationTool(object):
 
     def handleApiCommand(self, command, data):
         if not self._calibPluginInstance.isOperational():
-            self._calibPluginInstance._logger.error("Not operational. Cannot calibrate e steps.")
-            return
+            reason = "Not operational. Cannot calibrate e steps."
+            self._calibPluginInstance._logger.error(reason)
+            return False, reason
 
         if command == "calibrateESteps":
             self._filamentName = data["filamentName"]
@@ -71,8 +72,9 @@ class EStepsCalibrationTool(object):
 
         if command == "eStepsMeasured":
             if self._state != EStepsCalibrationTool.State.WAITING_FOR_MEASUREMENT_INPUT:
-                self._calibPluginInstance._logger.info("Wrong state detected: %s" % self._state)
-                return
+                reason = "Wrong state detected: %s" % self._state
+                self._calibPluginInstance._logger.info(reason)
+                return False, reason
             self._calibPluginInstance._logger.info("Command received: eStepsMeasured")
             
             measuredLength = float(data["measurement"])
@@ -92,8 +94,9 @@ class EStepsCalibrationTool(object):
 
         if command == "saveNewESteps":
             if self._state != EStepsCalibrationTool.State.WAITING_FOR_USER_CONFIRM:
-                self._calibPluginInstance._logger.info("Wrong state detected: %s" % self._state)
-                return
+                reason = "Wrong state detected: %s" % self._state
+                self._calibPluginInstance._logger.info()
+                return False, reason
             self._calibPluginInstance._logger.info("Command received: saveNewESteps")
 
             self._calibPluginInstance._printer.set_temperature("tool0", 0)
@@ -108,6 +111,8 @@ class EStepsCalibrationTool(object):
             eStepsCalibModel.oldESteps = round(self._eSteps, 3)
             eStepsCalibModel.newESteps = round(self._newEsteps, 3)
             self._databaseManager.insertEstepsCalibration(eStepsCalibModel)
+
+        return True, ""
 
     def handleGcodeReceived(self, comm, line, *args, **kwargs):
         line_lower = line.lower()
