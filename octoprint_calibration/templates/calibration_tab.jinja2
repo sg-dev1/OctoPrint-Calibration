@@ -25,6 +25,11 @@
     <button title="New e steps calibration" class="btn btn-primary" data-bind="click: newEStepsCalibration">
         <i class="fa fa-plus"></i> E Steps Calibration</button>
     </div>
+
+    <div>
+    <button title="New e steps calibration" class="btn btn-primary" data-bind="click: showEStepsCalibrations">
+        <i class="fa fa-plus"></i> Show E Steps Calibrations</button>
+    </div>
 </script>
 
 <script id="calibPlugin_errorPageTmpl" type="text/html">
@@ -38,6 +43,36 @@
 </script>
 
 <!-- BEGIN E Steps Calibration -->
+
+<script id="eSteps_showCalibrationsTmpl" type="text/html">
+    <table id="eSteps_showCalibrationsTmpl_table">
+        <thead>
+            <tr>
+                <th>Creation Date</th>
+                <th>Filament Name</th>
+                <th>Filament Type</th>
+                <th>Hotend Temperature (C°)</th>
+                <th>Old E Steps</th>
+                <th>New E Steps</th>
+            </tr>
+        </thead>
+        <tbody data-bind="foreach: eStepsCalibrationView.paginated " >
+            <tr data-bind="click: $parent.eStepsCalibrationView.select, css: {flash: $parent.eStepsCalibrationView.selected() === $data}">
+            <td data-bind="text: creationDate"></td>
+            <td data-bind="text: filamentName"></td>
+            <td data-bind="text: filamentType"></td>
+            <td data-bind="text: hotendTemp"></td>
+            <td data-bind="text: oldEsteps"></td>
+            <td data-bind="text: newESteps"></td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="pager">
+	    <a href="#" class="previous" data-bind="click: eStepsCalibrationView.previous, visible: eStepsCalibrationView.hasPrevious">&lt;</a>
+	    <span class="current" data-bind="text: eStepsCalibrationView.pageNumber"></span>
+	    <a href="#" class="next" data-bind="click: eStepsCalibrationView.next, visible: eStepsCalibrationView.hasNext">&gt;</a>
+    </div>
+</script>
 
 <script id="eSteps_newEStepCalibrationTmpl" type="text/html">
     <div>

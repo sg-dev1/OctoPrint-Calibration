@@ -1,1 +1,26 @@
 /* TODO: Have your plugin's CSS files generated to here. */
+
+#eSteps_showCalibrationsTmpl_table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+
+#eSteps_showCalibrationsTmpl_table th {
+border-top: 1px solid #dddddd;
+border-bottom:1px solid #dddddd;
+background-color: #f0f0f5
+
+}
+#eSteps_showCalibrationsTmpl_table td {
+border-bottom:1px solid #dddddd;
+}
+
+
+#eSteps_showCalibrationsTmpl_table td, #eSteps_showCalibrationsTmpl_table th {    
+    text-align: left;
+    padding: 8px;
+}
+
+.flash { background-color: #b6bcdb; }
