@@ -114,8 +114,11 @@ class CalibrationPlugin(CalibrationAPI,
         return line
 
     ### Public Interface
+    # Function to be called by calib_tools to check if calibration can be performed
+    # E.g. for this to succeed printer must not be printing, paused, disconnected etc.
     def isOperational(self):
-        return self._connected
+        return self._connected and \
+            self._printer.get_state_id() == "OPERATIONAL"
 
     ### Internal stuff
     ###

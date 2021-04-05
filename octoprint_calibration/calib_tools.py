@@ -56,7 +56,7 @@ class EStepsCalibrationTool(object):
 
     def handleApiCommand(self, command, data):
         if not self._calibPluginInstance.isOperational():
-            reason = "Not operational. Cannot calibrate e steps."
+            reason = "Not operational. Cannot calibrate e steps. E.g. printer must not be in PRINTING, PAUSED, ERROR etc. state."
             self._logger.error(reason)
             return False, reason
 
@@ -160,7 +160,7 @@ class EStepsCalibrationTool(object):
 
     def _preheatWait(self):
         if self._state != EStepsCalibrationTool.State.WAITING_FOR_EXTRUDER_TEMP:
-            self._logger.info("Wrong state detected")
+            self._logger.info("Wrong state detected: %s", self._state)
             return
         temps = self._printer.get_current_temperatures()
         self._logger.info("temps: %s", str(temps))
