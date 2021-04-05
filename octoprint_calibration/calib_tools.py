@@ -62,13 +62,33 @@ class EStepsCalibrationTool(object):
 
         if command == "calibrateESteps":
             self._filamentName = data["filamentName"]
-            self._filamentType = data["filamentType"]
-            #self._toolTemperature = self._calibPluginInstance._settings.get_int(["hotendTemp"])
-            self._toolTemperature = int(data["hotendTemp"])
+            self._filamentType = data["filamentType"]["name"]
+            try:
+                self._toolTemperature = int(data["hotendTemp"])
+            except ValueError:
+                reason = "Given value '%s' for 'hotendTemp' is not an integer." % data["hotendTemp"]
+                self._logger.error(reason)
+                return False, reason
+
+            if not self._filamentName or not self._filamentName.strip():
+                reason = "Filament Name must not be empty."
+                self._logger.error(reason)
+                return False, reason
+
+            if not self._filamentType or not self._filamentType.strip():
+                reason = "Filament Type must not be empty."
+                self._logger.error(reason)
+                return False, reason
+
+            # TODO make allowed temperature range configurable
+            if self._toolTemperature < 180 or self._toolTemperature > 500:
+                reason = "Given tool temperature %d is out of allowed range [180;500]." % self._toolTemperature
+                self._logger.error(reason)
+                return False, reason
 
             self._logger.info(
                 "Starting new e steps calibration for filament '%s' of type '%s' with hotend temperature %d.", \
-                    self._filamentName, self._filamentType["name"], self._toolTemperature)
+                    self._filamentName, self._filamentType, self._toolTemperature)
 
             self._printer.set_temperature("tool0", self._toolTemperature)
             self._printer.commands("M92")
@@ -81,13 +101,19 @@ class EStepsCalibrationTool(object):
                 self._startExtrudingClicked = True
 
         if command == "eStepsMeasured":
-            if self._state != EStepsCalibrationTool.State.WAITING_FOR_MEASUREMENT_INPUT:
+            if self._state != EStepsCalibrationTool.State.WAITING_FOR_MEASUREMENT_INPUT and \
+                self._state != EStepsCalibrationTool.State.WAITING_FOR_USER_CONFIRM:
                 reason = "Wrong state detected: %s" % self._state
-                self._logger.info(reason)
+                self._logger.error(reason)
                 return False, reason
             self._logger.info("Command received: eStepsMeasured")
 
-            measuredLength = float(data["measurement"])
+            try:
+                measuredLength = float(data["measurement"])
+            except ValueError:
+                reason = "Given value '%s' for 'measurement' is not a float value." % data["measurement"]
+                self._logger.error(reason)
+                return False, reason
             self._logger.info("Received measurement %.2f.", measuredLength)
 
             filamentExtruded = 120 - measuredLength
@@ -105,7 +131,7 @@ class EStepsCalibrationTool(object):
         if command == "saveNewESteps":
             if self._state != EStepsCalibrationTool.State.WAITING_FOR_USER_CONFIRM:
                 reason = "Wrong state detected: %s" % self._state
-                self._logger.info()
+                self._logger.error(reason)
                 return False, reason
             self._logger.info("Command received: saveNewESteps")
 
@@ -116,10 +142,10 @@ class EStepsCalibrationTool(object):
 
             eStepsCalibModel = EStepsCalibrationModel()
             eStepsCalibModel.filamentName = self._filamentName
-            eStepsCalibModel.filamentType = self._filamentType["name"]
+            eStepsCalibModel.filamentType = self._filamentType
             eStepsCalibModel.hotendTemperature = self._toolTemperature
-            eStepsCalibModel.oldESteps = round(self._eSteps, 3)
-            eStepsCalibModel.newESteps = round(self._newEsteps, 3)
+            eStepsCalibModel.oldESteps = round(self._eSteps, 2)
+            eStepsCalibModel.newESteps = round(self._newEsteps, 2)
             self._databaseManager.insertEstepsCalibration(eStepsCalibModel)
 
         return True, ""
