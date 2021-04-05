@@ -72,6 +72,11 @@
 	    <span class="current" data-bind="text: eStepsCalibrationView.pageNumber"></span>
 	    <a href="#" class="next" data-bind="click: eStepsCalibrationView.next, visible: eStepsCalibrationView.hasNext">&gt;</a>
     </div>
+
+    <div>
+    <button title="Back to start page" class="btn btn-primary" data-bind="click: backToStartPage">
+        <i class="fa fa-plus"></i> Back to start page</button>
+    </div>
 </script>
 
 <script id="eSteps_newEStepCalibrationTmpl" type="text/html">

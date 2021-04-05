@@ -5,24 +5,26 @@
  * License: AGPLv3
  */
 $(function() {
-    function APIClient(pluginId, baseUrl) {
+    function APIClient(pluginId, apiBaseUrl, baseUrl) {
         var self = this;
 
         self.pluginId = pluginId;
-        self.baseUrl = baseUrl;
+        self.apiBaseUrl = apiBaseUrl;  // for SimpleApiPlugin mixin endpoint
+        self.baseUrl = baseUrl;        // for custom BlueprintPlugin mixin endpoints
 
         self.makePostRequest = function(postData, responseHandler, errorHandler) {
             $.ajax({
-                url: self.baseUrl + "plugin/" + self.pluginId,
+                url: self.apiBaseUrl + "plugin/" + self.pluginId,
                 type: "post",
                 dataType: "json",
                 contentType: 'application/json',
                 data: JSON.stringify(postData)
-            }).done(
+            })
+            .done(
                 function( data ) {
                     responseHandler(data);
-                }
-            ).fail(
+                })
+            .fail(
                 function (data) {
                     console.error("Error: " + JSON.stringify(data));
                     errorHandler(data);
@@ -32,12 +34,35 @@ $(function() {
 
         self.makeGetRequest = function(responseHandler) {
             $.ajax({
-                url: self.baseUrl + "plugin/" + self.pluginId,
+                url: self.apiBaseUrl + "plugin/" + self.pluginId,
                 type: "get"
-            }).done(function( data ){
+            })
+            .done(function( data ){
                 responseHandler(data);
-            });
+            })
+            .fail(
+                function (data) {
+                    console.error("Error: " + JSON.stringify(data));
+                }
+            );
         };
+
+        self.makeGetRequestToEndPoint = function(endPoint, responseHandler, errorHandler) {
+            $.ajax({
+                url: self.baseUrl + "plugin/" + self.pluginId + endPoint,
+                type: "get"
+            })
+            .done(
+                function( data ){
+                    responseHandler(data);
+                })
+            .fail(
+                function (data) {
+                    console.error("Error: " + JSON.stringify(data));
+                    errorHandler(data);
+                }
+            );
+        }
     };
 
     // https://jsfiddle.net/AnkUser/975ncawv/149/
@@ -52,7 +77,9 @@ $(function() {
         self.newESteps = ko.observable(newESteps);        
     }
     EStepsCalibrationModel.fromRawDataPoint = function(dto) {
-        return new EStepsCalibrationModel(dto.creationDate, dto.filamentName, dto.filamentType, dto.hotendTemp, dto.oldEsteps, dto.newESteps);
+        // names must be a direct match as how they are returned by the backend
+        // see models.py
+        return new EStepsCalibrationModel(dto.created, dto.filamentName, dto.filamentType, dto.hotendTemperature, dto.oldESteps, dto.newESteps);
     }
 
     function ShowEStepsCalibrationsView(entriesPerPage) {
@@ -295,7 +322,10 @@ $(function() {
                     var innerSelf = this;
                     console.log("Loading data: " + JSON.stringify(rawData))
                     innerSelf.eStepsCalibrationView.loadData(rawData);
-                }                
+                },
+                backToStartPage: function() {
+                    self.parent.goToStartPage();
+                }           
             })
         ]);
 
@@ -304,8 +334,10 @@ $(function() {
         }
 
         self.stepModels()[6].model().initialize();
-        self.showEStepsCalibrations = function() {
-            // load data from backend - for testing use dummy data
+        self.showEStepsCalibrations = function(setCurrentStep) {
+            // load data from backend 
+            /*
+            // - for testing use dummy data
             var dummyData = [
                 {
                     creationDate: "2021-01-01 12:24:25",
@@ -356,12 +388,23 @@ $(function() {
                     newESteps: 93
                 }
             ];
+            */
+            self.apiClient.makeGetRequestToEndPoint("/eStepCalibrations", 
+                function (data) {
+                    // and call <Step>.loadData(loadedDataInDto)
+                    showCalibStep = self.stepModels()[6];
+                    showCalibStep.model().loadData(data);
+                    setCurrentStep(showCalibStep);
+                }, 
+            self.defaultErrorHandler);
 
+            /*
             // and call <Step>.loadData(loadedDataInDto)
             showCalibStep = self.stepModels()[6];
             showCalibStep.model().loadData(dummyData);
 
             return showCalibStep;
+            */
         }
     }
 
@@ -376,7 +419,7 @@ $(function() {
 
         console.log("Hello from CalibrationViewModel");
         
-        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL);
+        self.apiClient = new APIClient(PLUGIN_ID, API_BASEURL, BASEURL);
         self.eStepsCalibrationTool = new EStepsCalibrationTool(self.apiClient, self);
 
         self.stepModels = ko.observableArray([
@@ -387,7 +430,8 @@ $(function() {
                     },
                 showEStepsCalibrations:
                     function() {
-                        self.currentStep(self.eStepsCalibrationTool.showEStepsCalibrations());
+                        //self.currentStep(self.eStepsCalibrationTool.showEStepsCalibrations());
+                        self.eStepsCalibrationTool.showEStepsCalibrations(self.setCurrentStep);
                     }
             }),
             new Step(1, "ErrorPage", "calibPlugin_errorPageTmpl", {

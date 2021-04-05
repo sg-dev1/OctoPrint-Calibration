@@ -8,8 +8,10 @@ import octoprint.plugin
 
 from octoprint_calibration.calib_tools import EStepsCalibrationTool
 from octoprint_calibration.database_manager import DatabaseManager
+from octoprint_calibration.calibration_api import CalibrationAPI
 
-class CalibrationPlugin(octoprint.plugin.SettingsPlugin,
+class CalibrationPlugin(CalibrationAPI,
+                        octoprint.plugin.SettingsPlugin,
                         octoprint.plugin.AssetPlugin,
                         octoprint.plugin.TemplatePlugin,
                         octoprint.plugin.SimpleApiPlugin,
