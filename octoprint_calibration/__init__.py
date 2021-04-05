@@ -70,12 +70,12 @@ class CalibrationPlugin(CalibrationAPI,
 
                 # version check: github repository
                 type="github_release",
-                user="you",
+                user="sg-dev1",
                 repo="OctoPrint-Calibration",
                 current=self._plugin_version,
 
                 # update method: pip
-                pip="https://github.com/you/OctoPrint-Calibration/archive/{target_version}.zip"
+                pip="https://github.com/sg-dev1/OctoPrint-Calibration/archive/{target_version}.zip"
             )
         )
 
