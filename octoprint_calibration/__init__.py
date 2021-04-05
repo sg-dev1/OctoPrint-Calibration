@@ -34,7 +34,8 @@ class CalibrationPlugin(CalibrationAPI,
     def get_settings_defaults(self):
         return dict(
             # put your plugin's default settings here
-            hotendTemp=210
+            hotendTemp=210,
+            entriesPerPageForTables=20
         )
 
     ##~~ AssetPlugin mixin
@@ -47,6 +48,14 @@ class CalibrationPlugin(CalibrationAPI,
             css=["css/calibration.css"],
             less=["less/calibration.less"]
         )
+
+    ##~~ TemplatePlugin mixin
+
+    # pylint: disable=no-self-use
+    def get_template_configs(self):
+        return [
+            dict(type="settings", custom_bindings=False)
+        ]
 
     ##~~ Softwareupdate hook
 

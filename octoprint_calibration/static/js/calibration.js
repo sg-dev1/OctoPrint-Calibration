@@ -172,6 +172,13 @@ $(function() {
             "command": "saveNewESteps"
         };
 
+        self.onBeforeBinding = function() {
+            // TODO this function should also be called when settings are changed by the user
+            // Currently he must reload the site s.t. the new settings take effect (I don't know how to implement that)
+            self.stepModels()[0].model().hotendTemperature(self.parent.settings.settings.plugins.calibration.hotendTemp());
+            self.stepModels()[6].model().initialize(self.parent.settings.settings.plugins.calibration.entriesPerPageForTables());
+        };
+
         /*
             class State(Enum):
                 IDLE = 1
@@ -236,6 +243,10 @@ $(function() {
                             };
                             timeoutHandler();
                         }, self.defaultErrorHandler);
+                    },
+                backToStartPage:
+                    function() {
+                        self.parent.goToStartPage();
                     }
             }),
             new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {     
@@ -316,9 +327,9 @@ $(function() {
             // special step for show E Steps calibration view
             new Step(6, "ShowEStepCalibrationsView", "eSteps_showCalibrationsTmpl", {
                 eStepsCalibrationView: undefined,
-                initialize: function() {
+                initialize: function(entriesPerPage) {
                     var innerSelf = this;
-                    var entriesPerPage = 2;
+                    //var entriesPerPage = 20;
                     innerSelf.eStepsCalibrationView = new ShowEStepsCalibrationsView(entriesPerPage);
                 },
                 loadData: function(rawData) {
@@ -336,7 +347,7 @@ $(function() {
             return self.stepModels()[0];
         }
 
-        self.stepModels()[6].model().initialize();
+        
         self.showEStepsCalibrations = function(setCurrentStep) {
             // load data from backend 
             /*
@@ -419,6 +430,7 @@ $(function() {
         // assign the injected parameters, e.g.:
         // self.loginStateViewModel = parameters[0];
         // self.settingsViewModel = parameters[1];
+        self.settings = parameters[0];
 
         console.log("Hello from CalibrationViewModel");
         
@@ -464,6 +476,14 @@ $(function() {
             errorStp.model()["errorMessage"](errorMsg);
             self.currentStep(errorStp);
         }
+
+        // This will get called before the HelloWorldViewModel gets bound to the DOM, but after its
+        // dependencies have already been initialized. It is especially guaranteed that this method
+        // gets called _after_ the settings have been retrieved from the OctoPrint backend and thus
+        // the SettingsViewModel been properly populated.
+        self.onBeforeBinding = function() {
+            self.eStepsCalibrationTool.onBeforeBinding();
+        }
     }
 
     /* view model class, parameters for constructor, container to bind to
@@ -473,7 +493,7 @@ $(function() {
     OCTOPRINT_VIEWMODELS.push({
         construct: CalibrationViewModel,
         // ViewModels your plugin depends on, e.g. loginStateViewModel, settingsViewModel, ...
-        dependencies: [ /* "loginStateViewModel", "settingsViewModel" */ ],
+        dependencies: [ /* "loginStateViewModel",*/ "settingsViewModel"  ],
         // Elements to bind to, e.g. #settings_plugin_calibration, #tab_plugin_calibration, ...
         // This is very important for the data binding
         // If it is empty (default after creating the skeleton project) no data binding is applied (button clicks don't work etc.)

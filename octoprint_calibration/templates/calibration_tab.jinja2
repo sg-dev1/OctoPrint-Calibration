@@ -19,16 +19,22 @@
 </script>
 
 <script id="calibPlugin_startPageTmpl" type="text/html">
-    <div>Select the calibration you want to perform:</div>
-
-    <div>
-    <button title="New e steps calibration" class="btn btn-primary" data-bind="click: newEStepsCalibration">
-        <i class="fa fa-plus"></i> E Steps Calibration</button>
+    <div class="row">
+        <div class="span12">Select the calibration you want to perform:</div>
     </div>
 
-    <div>
-    <button title="New e steps calibration" class="btn btn-primary" data-bind="click: showEStepsCalibrations">
-        <i class="fa fa-plus"></i> Show E Steps Calibrations</button>
+    <div class="row">
+        <div class="span12">
+        <button title="New e steps calibration" class="btn btn-primary" data-bind="click: newEStepsCalibration">
+            <i class="fa fa-plus"></i> E Steps Calibration</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="span12">
+        <button title="New e steps calibration" class="btn btn-primary" data-bind="click: showEStepsCalibrations">
+            <i class="fa fa-plus"></i> Show E Steps Calibrations</button>
+        </div>
     </div>
 </script>
 
@@ -80,26 +86,35 @@
 </script>
 
 <script id="eSteps_newEStepCalibrationTmpl" type="text/html">
-    <div>
-        <label>Filament name: 
-        <input type="text" class="input-xxlarge" data-bind="value: filamentName"></label>
+    <div class="row">
+        <div class="span4"><label>Filament name: </label></div>
+        <div class="span4"><input type="text" class="input-xxlarge" data-bind="value: filamentName"></div>
     </div>
 
-    <div>
-        <label>Filament type: 
-        <select data-bind="options: filamentTypes, optionsText: 'name', value: selectedFilamentType"></select></label>
+    <div class="row">
+        <div class="span4"><label>Filament type: </label></div>
+        <div class="span4"><select data-bind="options: filamentTypes, optionsText: 'name', value: selectedFilamentType"></select></div>
     </div>
 
-    <div>
-        <label>Hotend Temperature (C°): 
-        <input type="number" class="input-xxlarge" data-bind="value: hotendTemperature"></label>
+    <div class="row">
+        <div class="span4"><label>Hotend Temperature (C°): </label></div>
+        <div class="span4"><input type="number" class="input-xxlarge" data-bind="value: hotendTemperature"></div>
     </div>
 
     <!-- further input to be added if required -->
 
-    <div>
-    <button title="Start e steps calibration" class="btn btn-primary" data-bind="click: startEStepsCalibration">
-        <i class="fa fa-plus"></i> Start E Steps Calibration</button>
+    <div class="row">
+
+        <div class="span4">
+        <button title="Start e steps calibration" class="btn btn-primary" data-bind="click: startEStepsCalibration">
+            <i class="fa fa-plus"></i> Start E Steps Calibration</button>
+        </div>
+
+        <div class="span4">
+        <button title="Back to start page" class="btn btn-primary" data-bind="click: backToStartPage">
+            <i class="fa fa-plus"></i> Back to start page</button>
+        </div>
+
     </div>
 </script>
 
