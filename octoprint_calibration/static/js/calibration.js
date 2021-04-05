@@ -186,7 +186,7 @@ $(function() {
             self.apiClient.makeGetRequest(function (data) {
                 console.log("GET call done:" + JSON.stringify(data));
         
-                handleToolState(data["eStepsToolState"]);
+                handleToolState(data["eStepsToolState"], data["currTemp"]);
             });
         };
 
@@ -221,13 +221,15 @@ $(function() {
                             console.log("Call done:" + JSON.stringify(data));
 
                             var timeoutHandler = function() {
-                                self.getToolState(function(state) {
+                                self.getToolState(function(state, currTemp) {
                                     if (state == 4) {
                                         // only advance to next step when state == WAITING_FOR_EXTRUDE_START (4)
                                         self.parent.setCurrentStep(self.stepModels()[2]);
                                     }
                                     else {
-                                        self.parent.setCurrentStep(self.stepModels()[1]);
+                                        waitingForTempStep = self.stepModels()[1];
+                                        waitingForTempStep.model().currTemperature(currTemp);
+                                        self.parent.setCurrentStep(waitingForTempStep);
                                         setTimeout(timeoutHandler, 3000);
                                     }
                                 });
@@ -236,7 +238,8 @@ $(function() {
                         }, self.defaultErrorHandler);
                     }
             }),
-            new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {                
+            new Step(1, "WaitingForExtruderTemp", "eSteps_waitingForExtruderTemp", {     
+                currTemperature: ko.observable()           
             }),
             new Step(2, "StartExtruding", "eSteps_startExtrudingTmpl", {
                 startExtruding: 

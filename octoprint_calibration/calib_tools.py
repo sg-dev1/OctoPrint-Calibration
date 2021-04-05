@@ -36,11 +36,13 @@ class EStepsCalibrationTool(object):
         self._printer = printer
 
     def getToolState(self):
+        #self._logger.info(str(self._printer.get_current_temperatures()))
         return dict(
             oldEsteps="%.2f" % self._eSteps,
             newEsteps="%.2f" % self._newEsteps,
             newEstepsValid=str(self._newEstepsValid),
-            eStepsToolState=str(self._state.value)
+            eStepsToolState=str(self._state.value),
+            currTemp="%.2f" % self._printer.get_current_temperatures()["tool0"]["actual"]
         )
 
     # pylint: disable=no-self-use
